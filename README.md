@@ -1,17 +1,38 @@
-# airmatch
+# AirMatch
 
-A new Flutter project.
+Airport Traveler Matching Platform — connect travelers at the same airport heading to similar destinations so they can share transportation.
 
-## Getting Started
+## Repositories
 
-This project is a starting point for a Flutter application.
+This project is split into separate repositories:
 
-A few resources to get you started if this is your first Flutter project:
+| Repo | Description | Link |
+|------|-------------|------|
+| **Flutter app** | Mobile client (iOS & Android) | [github.com/jaydeepdodiya/airmatch-flutter](https://github.com/jaydeepdodiya/airmatch-flutter) |
+| **Backend API** | Node.js REST API | [github.com/jaydeepdodiya/airmatch-backend](https://github.com/jaydeepdodiya/airmatch-backend) |
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Local development
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Clone both repos side by side (or keep this folder layout):
+
+```
+development/
+├── airmatch/              ← this repo (docs only)
+├── airmatch-flutter/      ← git clone ...
+└── airmatch-backend/      ← git clone ...
+```
+
+Or work from this monorepo-style folder — `flutter/` and `backend/` are separate git repos and are not tracked here.
+
+## Documentation
+
+- [Product Requirements (PRD)](docs/PRD.md)
+
+## Tech stack
+
+| Layer | Stack |
+|-------|-------|
+| Mobile | Flutter, BLoC, Clean Architecture, Dio, GetIt, Hive |
+| Backend | Node.js, Express |
+| Auth (planned) | Firebase Authentication |
+| Push (planned) | Firebase Cloud Messaging |
