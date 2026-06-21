@@ -3,8 +3,8 @@
 | Field | Value |
 |-------|-------|
 | **Product** | AirMatch |
-| **Version** | 1.0 (MVP) |
-| **Status** | Draft |
+| **Version** | 1.2 (Phase 1 — Auth) |
+| **Status** | In Development |
 | **Last Updated** | June 18, 2026 |
 | **Owner** | Product / Engineering |
 
@@ -95,11 +95,48 @@ Airports concentrate high-intent travelers with shared destinations within a nar
 
 ### 5.1 Authentication & Onboarding
 
+AirMatch uses **Firebase Authentication** as the single identity provider. The Flutter app signs users in; the Node.js backend verifies Firebase ID tokens on every protected API call.
+
+#### 5.1.1 Sign-In Methods (MVP)
+
+| Method | Priority | Platform | Notes |
+|--------|----------|----------|-------|
+| **Google Sign-In** | P0 | Android, iOS | Primary social login; one-tap onboarding |
+| **Email / Password** | P0 | Android, iOS | Sign up + sign in with email verification (phase 1) |
+| Apple Sign-In | P1 | iOS only | Required for App Store if other social logins exist |
+| Phone OTP | P1 | Android, iOS | Trust badge; post-MVP for matching |
+
+#### 5.1.2 Google Sign-In — Requirements
+
+| ID | Requirement |
+|----|-------------|
+| GOOG-01 | "Continue with Google" button on login screen |
+| GOOG-02 | Uses `google_sign_in` → Firebase credential → `signInWithCredential` |
+| GOOG-03 | On success, user profile synced to backend via `POST /api/users/me` |
+| GOOG-04 | ID token attached to all API requests (`Authorization: Bearer <token>`) |
+| GOOG-05 | Sign out clears Google session + Firebase session + local token |
+| GOOG-06 | Android: `google-services.json` + SHA-1 fingerprint in Firebase Console |
+| GOOG-07 | iOS: `GoogleService-Info.plist` + reversed client ID URL scheme |
+
+#### 5.1.3 Auth Flow
+
+```
+App Launch
+  → Splash
+  → Firebase authStateChanges()
+       ├── signed in  → sync profile → Home
+       └── signed out → Login (Google + Email)
+```
+
+#### 5.1.4 User Stories
+
 | ID | User Story | Priority | Acceptance Criteria |
 |----|------------|----------|---------------------|
-| AUTH-01 | As a new user, I want to sign up with email or social login so I can create a profile quickly | P0 | Firebase Auth supports email/password, Google, Apple; profile created on first login |
-| AUTH-02 | As a user, I want to verify my phone number so others trust my identity | P0 | SMS OTP via Firebase; verified badge on profile |
-| AUTH-03 | As a user, I want to complete a profile (photo, name, languages) so matches can assess compatibility | P0 | Required fields enforced before first match request |
+| AUTH-01 | As a new user, I want to sign up with **Google** or email so I can create a profile quickly | P0 | Google Sign-In works on Android & iOS; email sign-up creates Firebase user |
+| AUTH-02 | As a user, I want to verify my phone number so others trust my identity | P1 | SMS OTP via Firebase; verified badge on profile |
+| AUTH-03 | As a user, I want to complete a profile (photo, name, languages) so matches can assess compatibility | P0 | Name + photo from Google account shown; optional fields before first match |
+| AUTH-04 | As a signed-in user, I want to sign out from the app | P0 | Sign out returns to Login; API token no longer sent |
+| AUTH-05 | As a user, my API calls must be secure | P0 | Backend rejects missing/invalid Firebase tokens on protected routes |
 
 ### 5.2 Trip Intent
 
@@ -326,9 +363,12 @@ MVP is **free** to maximize liquidity and validate matching quality.
 
 ## 15. Release Plan
 
-### Phase 0 — Foundation (Weeks 1–4)
-- Auth, profile, trip creation, API scaffold
-- CI/CD pipeline, unit test baseline
+### Phase 0 — Foundation (Weeks 1–4) — **Complete**
+- ✅ Monorepo split into `airmatch-flutter` + `airmatch-backend`
+- ✅ Flutter Clean Architecture scaffold (BLoC, Dio, GetIt)
+- ✅ Backend trips API + matching engine (in-memory)
+- ✅ Firebase Auth + Google Sign-In (Flutter + backend token verify)
+- ⬜ CI/CD pipeline
 
 ### Phase 1 — MVP (Weeks 5–10)
 - Matching engine, discovery UI, requests, chat
@@ -368,5 +408,214 @@ MVP is **free** to maximize liquidity and validate matching quality.
 
 ### 17.2 Related Documents
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — Flutter & system architecture
-- [BACKEND.md](./BACKEND.md) — Node.js API specification
+| Document | Location |
+|----------|----------|
+| Flutter app repo | [github.com/jaydeepdodiya/airmatch-flutter](https://github.com/jaydeepdodiya/airmatch-flutter) |
+| Backend API repo | [github.com/jaydeepdodiya/airmatch-backend](https://github.com/jaydeepdodiya/airmatch-backend) |
+| Project overview | [github.com/jaydeepdodiya/airmatch](https://github.com/jaydeepdodiya/airmatch) |
+
+---
+
+## 18. Repository Structure
+
+```
+airmatch/                    ← docs & overview (this PRD)
+airmatch-flutter/            ← Flutter mobile app
+airmatch-backend/            ← Node.js REST API
+```
+
+Each repo is developed and deployed independently. The Flutter app calls the backend over HTTPS (HTTP in local dev).
+
+---
+
+## 19. Flutter App — Technical Scope
+
+### 19.1 Stack
+
+| Layer | Technology |
+|-------|------------|
+| UI | Flutter 3.x, Material 3 |
+| State | flutter_bloc |
+| Architecture | Clean Architecture (presentation → domain → data) |
+| DI | get_it |
+| HTTP | dio |
+| Local cache (planned) | hive |
+| Auth | firebase_auth, google_sign_in | ✅ Phase 1 |
+| Push (planned) | firebase_messaging |
+
+### 19.2 Folder Structure
+
+```
+lib/
+├── main.dart
+├── app.dart
+├── core/
+│   ├── constants/
+│   ├── di/injection.dart
+│   ├── network/dio_client.dart
+│   ├── theme/app_theme.dart
+│   └── error/failures.dart
+├── config/api_config.dart
+└── features/
+    ├── splash/
+    ├── home/
+    └── trips/
+        ├── data/        → API models, remote datasource, repo impl
+        ├── domain/      → entities, repository contracts, use cases
+        └── presentation/ → BLoC, pages, widgets
+```
+
+### 19.3 Phase 0 — Completed
+
+| Item | Status |
+|------|--------|
+| Clean Architecture scaffold | ✅ |
+| GetIt + Dio setup | ✅ |
+| Splash → Home navigation | ✅ |
+| Home: API health check | ✅ |
+| Trips: create + list + find matches | ✅ |
+| Unit test for Home BLoC | ✅ |
+
+### 19.4 Phase 1 — Auth (In Progress)
+
+| Item | Status |
+|------|--------|
+| Firebase Core initialization | ✅ |
+| Google Sign-In | ✅ |
+| Email / password sign-in & sign-up | ✅ |
+| Auth gate (Splash → Login or Home) | ✅ |
+| Dio Bearer token interceptor | ✅ |
+| Sign out from Home | ✅ |
+| Profile onboarding (full) | ⬜ |
+| Apple Sign-In | ⬜ |
+
+### 19.5 Firebase Setup (required once)
+
+1. Create project at [Firebase Console](https://console.firebase.google.com)
+2. Enable **Authentication** → Sign-in methods → **Google** + **Email/Password**
+3. Install FlutterFire CLI: `dart pub global activate flutterfire_cli`
+4. Run from `flutter/`: `flutterfire configure`
+5. Add Android SHA-1 (debug): `cd android && ./gradlew signingReport`
+6. Download `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) — auto-placed by FlutterFire
+
+### 19.6 Phase 2 — Next
+
+| Item | Priority |
+|------|----------|
+| Profile onboarding screen | P0 |
+| Hive offline cache for trips | P1 |
+| FCM push notifications | P0 |
+| Deep linking (`airmatch://match/{id}`) | P0 |
+| Apple Sign-In (iOS) | P1 |
+
+### 19.7 Local API URL
+
+| Platform | Base URL |
+|----------|----------|
+| iOS Simulator | `http://localhost:3000` |
+| Android Emulator | `http://10.0.2.2:3000` |
+| Physical device | Your machine's LAN IP, e.g. `http://192.168.1.10:3000` |
+
+Override at build time: `--dart-define=API_BASE_URL=http://10.0.2.2:3000`
+
+---
+
+## 20. Backend API — Technical Scope
+
+### 20.1 Stack
+
+| Layer | Technology |
+|-------|------------|
+| Runtime | Node.js 20+ |
+| Framework | Express 4 |
+| Storage (Phase 0) | In-memory (learning-friendly; resets on restart) |
+| Storage (Phase 1) | MongoDB or PostgreSQL |
+| Auth | Firebase Admin SDK (verify ID tokens) | ✅ Phase 1 |
+
+### 20.2 Folder Structure
+
+```
+src/
+├── server.js
+├── app.js
+├── config/env.js
+├── routes/
+├── controllers/
+├── services/       → business logic (matching, trip store)
+├── middleware/
+└── utils/
+```
+
+### 20.3 API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/health` | No | Service health check |
+| GET | `/api/users/me` | Yes | Get current user profile |
+| PUT | `/api/users/me` | Yes | Update / sync profile after login |
+| GET | `/api/trips` | Yes | List active trips |
+| POST | `/api/trips` | Yes | Create a trip intent |
+| GET | `/api/trips/:id` | Yes | Get trip by ID |
+| GET | `/api/trips/:id/matches` | Yes | Find compatible trips |
+
+**Auth header:** `Authorization: Bearer <Firebase ID token>`
+
+**Local dev bypass:** set `SKIP_AUTH=true` in `backend/.env` to use `demo-user` without Firebase (testing only).
+
+### 20.4 Trip — Request Body (`POST /api/trips`)
+
+```json
+{
+  "airportIata": "SFO",
+  "terminal": "2",
+  "arrivalAt": "2026-06-20T14:30:00.000Z",
+  "destinationLabel": "Downtown San Francisco",
+  "destinationLat": 37.7749,
+  "destinationLng": -122.4194,
+  "partySize": 2,
+  "luggage": "checked",
+  "vehiclePref": "economy"
+}
+```
+
+### 20.5 Match Response Shape
+
+```json
+{
+  "tripId": "abc-123",
+  "matches": [
+    {
+      "trip": { "id": "...", "airportIata": "SFO", "..." },
+      "score": 0.82,
+      "breakdown": {
+        "timeOverlap": 0.9,
+        "destinationProximity": 0.85,
+        "partySizeFit": 1.0,
+        "vehiclePreferenceAlign": 1.0,
+        "trustScore": 0.5
+      }
+    }
+  ]
+}
+```
+
+Only matches with `score >= 0.65` are returned (per §6.1).
+
+### 20.6 Phase 1 — Completed / In Progress
+
+| Item | Status |
+|------|--------|
+| Firebase Admin token middleware | ✅ |
+| Users profile (`GET/PUT /api/users/me`) | ✅ |
+| Trips scoped to authenticated user | ✅ |
+| MongoDB persistence | ⬜ |
+| Match requests (pending → accept/decline) | ⬜ |
+| Chat messages endpoint | ⬜ |
+| Rate limiting | ⬜ |
+
+### 20.7 Firebase Admin Setup
+
+1. Firebase Console → Project Settings → Service accounts → Generate new private key
+2. Save as `backend/serviceAccountKey.json` (gitignored)
+3. Set in `backend/.env`: `GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json`
+4. Or set `SKIP_AUTH=true` for local dev without Firebase
